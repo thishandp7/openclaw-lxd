@@ -1,0 +1,6 @@
+# Local state — never commit
+state/
+
+# Optional: keep exports/logs out of version control if state/ is ever tracked
+*.log
+state/exports/*.tar.gz
