@@ -31,8 +31,8 @@ else
   fi
 
   # When proxy is set: push apt proxy config to VM (validated URLs only; never logged)
-  vm_http="${VM_HTTP_PROXY:-$VM_HTTPS_PROXY}"
-  vm_https="${VM_HTTPS_PROXY:-$VM_HTTP_PROXY}"
+  vm_http="${VM_HTTP_PROXY:-${VM_HTTPS_PROXY:-}}"
+  vm_https="${VM_HTTPS_PROXY:-${VM_HTTP_PROXY:-}}"
   if [[ -n "$vm_http" ]] || [[ -n "$vm_https" ]]; then
     log "Using VM proxy for apt/curl"
     apt_proxy_tmp="$(mktemp)"
