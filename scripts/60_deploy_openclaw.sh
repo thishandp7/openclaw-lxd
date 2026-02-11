@@ -84,6 +84,10 @@ deploy_and_check() {
   push_env_to_vm "$bind_val"
   push_override_to_vm
 
+  # Stop any existing containers to avoid port conflicts
+  log "Stopping any existing containers..."
+  lxc_exec "$VM_NAME" bash -c 'cd /opt/openclaw/repo && docker compose --env-file /opt/openclaw/openclaw.env down' 2>/dev/null || true
+
   log "Starting containers..."
   lxc_exec "$VM_NAME" bash -c 'cd /opt/openclaw/repo && docker compose --env-file /opt/openclaw/openclaw.env up -d'
 

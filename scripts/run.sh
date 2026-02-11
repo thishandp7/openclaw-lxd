@@ -159,14 +159,14 @@ cmd_verify() {
     echo "  VM running: ❌"
   fi
 
-  if vm_ok && lxc_exec "$VM_NAME" bash -c 'cd /opt/openclaw/repo && docker compose ps 2>/dev/null' 2>/dev/null | grep -qE 'running|Up'; then
+  if [[ "$vm_ok" == true ]] && lxc_exec "$VM_NAME" bash -c 'cd /opt/openclaw/repo && docker compose ps 2>/dev/null' 2>/dev/null | grep -qE 'running|Up'; then
     containers_ok=true
     echo "  OpenClaw containers running: ✅"
   else
     echo "  OpenClaw containers running: ❌"
   fi
 
-  if vm_ok; then
+  if [[ "$vm_ok" == true ]]; then
     local ss_vm
     ss_vm="$(lxc_exec "$VM_NAME" ss -lntp 2>/dev/null)" || true
     if echo "$ss_vm" | grep -qE '127\.0\.0\.1:(18789|18790)\s'; then
@@ -186,7 +186,7 @@ cmd_verify() {
     echo "  Host binds only to 127.0.0.1:${OPENCLAW_PORT}/${OPENCLAW_BRIDGE_PORT}: ❌"
   fi
 
-  if vm_ok && lxc list "$VM_NAME" --snapshots --format csv 2>/dev/null | grep -q "$SNAPSHOT_NAME"; then
+  if [[ "$vm_ok" == true ]] && lxc list "$VM_NAME" --snapshots --format csv 2>/dev/null | grep -q "$SNAPSHOT_NAME"; then
     echo "  Snapshot $SNAPSHOT_NAME: ✅"
   else
     echo "  Snapshot $SNAPSHOT_NAME: ❌"
