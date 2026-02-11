@@ -10,9 +10,9 @@ load_env
 require_cmd lxc git
 
 # Clone if missing
-if ! lxc_exec "$VM_NAME" test -d /opt/openclaw/repo/.git 2>/dev/null; then
+if ! lxc_exec "$VM_NAME" test -d /opt/openclaw/repo/.git; then
   log "Cloning OpenClaw repo into VM..."
-  lxc_exec "$VM_NAME" git clone "$OPENCLAW_GIT_URL" /opt/openclaw/repo
+  retry 3 5 lxc_exec "$VM_NAME" git clone "$OPENCLAW_GIT_URL" /opt/openclaw/repo
 else
   log "Repo already present; re-pinning to $OPENCLAW_GIT_REF"
 fi

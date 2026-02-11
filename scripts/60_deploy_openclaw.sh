@@ -94,7 +94,9 @@ deploy_and_check() {
 
   # Wait for containers
   sleep 3
-  retry 15 2 lxc_exec "$VM_NAME" bash -c 'cd /opt/openclaw/repo && docker compose ps --format json 2>/dev/null | grep -q "running"' || true
+  if ! retry 15 2 lxc_exec "$VM_NAME" bash -c 'cd /opt/openclaw/repo && docker compose ps --format json 2>/dev/null | grep -q "running"'; then
+    log "WARNING: Container health check did not confirm running state"
+  fi
 
   # Check bind: ss must show 127.0.0.1 for 18789 and 18790
   local ss_out
@@ -121,8 +123,8 @@ if deploy_and_check "$BIND_VALUE"; then
     log "Deploy and health checks OK (bind=$BIND_VALUE)"
     exit 0
   fi
-  log "Bind OK but HTTP check failed; continuing."
-  exit 0
+  log "ERROR: Bind OK but HTTP check failed (bind=$BIND_VALUE)."
+  exit 1
 fi
 
 # Fallback: try OPENCLAW_GATEWAY_BIND=loopback
@@ -132,6 +134,8 @@ if deploy_and_check "loopback"; then
     log "Deploy and health checks OK (bind=loopback)"
     exit 0
   fi
+  log "ERROR: Bind OK but HTTP check failed (bind=loopback)."
+  exit 1
 fi
 
 log "ERROR: Containers not binding to 127.0.0.1 only. Check docker logs in VM: lxc exec $VM_NAME -- docker compose -f /opt/openclaw/repo/docker-compose.yml -f /opt/openclaw/repo/docker-compose.override.yml logs"

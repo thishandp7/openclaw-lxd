@@ -35,6 +35,7 @@ load_env() {
   validate_vm_names
   validate_ports
   validate_proxy_urls
+  validate_git_url
 }
 
 # When VM_HTTP_PROXY or VM_HTTPS_PROXY is set, validate format: http(s):// only, no quotes/backticks/space.
@@ -52,6 +53,27 @@ validate_proxy_urls() {
       echo "Invalid VM_HTTPS_PROXY (must be http:// or https:// URL with no quotes or spaces)." >&2
       exit 1
     fi
+  fi
+}
+
+# Validate OPENCLAW_GIT_URL: must be https://, git://, or ssh:// URL
+# Rejects file://, local paths, and suspicious patterns
+validate_git_url() {
+  local url="${OPENCLAW_GIT_URL:-}"
+  if [[ -z "$url" ]]; then
+    echo "OPENCLAW_GIT_URL is required." >&2
+    exit 1
+  fi
+  # Allow https://, git://, ssh://, or git@host:path format
+  local valid_regex='^(https://|git://|ssh://|git@[a-zA-Z0-9._-]+:)[^[:space:]]+$'
+  if [[ ! "$url" =~ $valid_regex ]]; then
+    echo "Invalid OPENCLAW_GIT_URL: must be https://, git://, ssh://, or git@host:path format." >&2
+    exit 1
+  fi
+  # Reject file:// and suspicious patterns
+  if [[ "$url" =~ ^file:// ]] || [[ "$url" =~ \.\. ]]; then
+    echo "Invalid OPENCLAW_GIT_URL: file:// and path traversal not allowed." >&2
+    exit 1
   fi
 }
 
