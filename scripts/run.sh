@@ -106,7 +106,7 @@ print_success_block() {
   exists_vm "$VM_NAME" && vm_ok=true
   echo "VM running: ${vm_ok:+✅ true}${vm_ok:-❌ false}"
 
-  if lxc_exec "$VM_NAME" bash -c 'cd /opt/openclaw/repo && docker compose ps 2>/dev/null' 2>/dev/null | grep -qE 'running|Up'; then
+  if lxc_exec "$VM_NAME" bash -c 'cd /opt/openclaw/repo && docker compose --env-file /opt/openclaw/openclaw.env ps 2>/dev/null' 2>/dev/null | grep -qE 'running|Up'; then
     containers_ok=true
   fi
   echo "OpenClaw containers running: ${containers_ok:+✅ true}${containers_ok:-❌ false}"
@@ -159,7 +159,7 @@ cmd_verify() {
     echo "  VM running: ❌"
   fi
 
-  if [[ "$vm_ok" == true ]] && lxc_exec "$VM_NAME" bash -c 'cd /opt/openclaw/repo && docker compose ps 2>/dev/null' 2>/dev/null | grep -qE 'running|Up'; then
+  if [[ "$vm_ok" == true ]] && lxc_exec "$VM_NAME" bash -c 'cd /opt/openclaw/repo && docker compose --env-file /opt/openclaw/openclaw.env ps 2>/dev/null' 2>/dev/null | grep -qE 'running|Up'; then
     containers_ok=true
     echo "  OpenClaw containers running: ✅"
   else

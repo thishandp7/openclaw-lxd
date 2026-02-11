@@ -90,7 +90,7 @@ deploy_and_check() {
 
   # Wait for containers
   sleep 3
-  if ! retry 15 2 lxc_exec "$VM_NAME" bash -c 'cd /opt/openclaw/repo && docker compose ps --format json 2>/dev/null | grep -q "running"'; then
+  if ! retry 15 2 lxc_exec "$VM_NAME" bash -c 'cd /opt/openclaw/repo && docker compose --env-file /opt/openclaw/openclaw.env ps --format json 2>/dev/null | grep -q "running"'; then
     log "WARNING: Container health check did not confirm running state"
   fi
 
