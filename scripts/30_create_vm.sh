@@ -19,20 +19,28 @@ if exists_vm "$VM_NAME"; then
   fi
 fi
 
-log "Launching VM $VM_NAME from $VM_IMAGE..."
+log "Launching VM $VM_NAME from $VM_IMAGE with disk size $VM_DISK..."
 lxc launch "$VM_IMAGE" "$VM_NAME" --vm \
   -c limits.cpu="$VM_CPU" \
-  -c limits.memory="$VM_MEM"
-
-# Resize root disk to VM_DISK (profile device must be overridden on instance first)
-# Use "override" to copy profile's root device to instance and set size in one go
-current_size="$(lxc config device get "$VM_NAME" root size 2>/dev/null)" || current_size=""
-if [[ "$current_size" != "$VM_DISK" ]]; then
-  log "Overriding root device with size $VM_DISK..."
-  lxc config device override "$VM_NAME" root size="$VM_DISK"
-fi
+  -c limits.memory="$VM_MEM" \
+  -d root,size="$VM_DISK"
 
 log "Waiting for cloud-init in VM..."
 retry 30 2 lxc exec "$VM_NAME" -- cloud-init status --wait
+
+# Grow the guest filesystem to use the full disk
+log "Resizing guest filesystem..."
+lxc exec "$VM_NAME" -- bash -c '
+  # Find the root partition (usually /dev/sda1 or /dev/vda1)
+  ROOT_DEV=$(findmnt -n -o SOURCE /)
+  DISK_DEV=$(echo "$ROOT_DEV" | sed "s/[0-9]*$//" | sed "s/p$//" )
+  PART_NUM=$(echo "$ROOT_DEV" | grep -o "[0-9]*$")
+
+  # Grow partition to use all available space
+  growpart "$DISK_DEV" "$PART_NUM" 2>/dev/null || true
+
+  # Resize the filesystem
+  resize2fs "$ROOT_DEV" 2>/dev/null || true
+'
 
 log "VM $VM_NAME is ready."
