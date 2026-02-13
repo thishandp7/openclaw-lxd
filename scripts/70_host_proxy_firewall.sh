@@ -9,6 +9,15 @@ source "$SCRIPT_DIR/lib.sh"
 load_env
 require_cmd lxc
 
+# Ensure VM has a static IP on lxdbr0 (required for NAT proxy)
+if ! lxc config device get "$VM_NAME" eth0 ipv4.address 2>/dev/null | grep -q '.'; then
+  BRIDGE_SUBNET="$(lxc network get lxdbr0 ipv4.address)"  # e.g. 10.75.159.1/24
+  BRIDGE_PREFIX="${BRIDGE_SUBNET%.*}"                       # e.g. 10.75.159
+  VM_STATIC_IP="${BRIDGE_PREFIX}.10"
+  log "Assigning static IP $VM_STATIC_IP to $VM_NAME eth0"
+  lxc config device set "$VM_NAME" eth0 ipv4.address="$VM_STATIC_IP"
+fi
+
 # 70.1 LXD proxy device: host 127.0.0.1:OPENCLAW_PORT -> VM port (NAT mode required for VMs)
 ensure_lxc_device "$VM_NAME" openclaw-ui proxy \
   listen="tcp:127.0.0.1:${OPENCLAW_PORT}" \
