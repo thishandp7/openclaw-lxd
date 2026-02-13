@@ -139,19 +139,7 @@ configure_gateway() {
   # 4. Run doctor --fix (creates credentials dir, fixes permissions) — idempotent
   lxc_exec "$VM_NAME" docker exec "$container" node dist/index.js doctor --fix 2>/dev/null || true
 
-  # 5. Auto-approve ALL pending device pairing requests
-  local pending
-  pending="$(lxc_exec "$VM_NAME" docker exec "$container" cat /home/node/.openclaw/devices/pending.json 2>/dev/null)" || true
-  if [[ -n "$pending" ]] && [[ "$pending" != "{}" ]]; then
-    local request_ids
-    request_ids="$(echo "$pending" | grep -oP '"requestId"\s*:\s*"\K[^"]+')" || true
-    for rid in $request_ids; do
-      log "Auto-approving pending device: $rid"
-      lxc_exec "$VM_NAME" docker exec "$container" node dist/index.js devices approve "$rid" 2>/dev/null || true
-    done
-  fi
-
-  # 6. Print dashboard URL with pairing token
+  # 5. Print dashboard URL with pairing token
   local dashboard_output
   dashboard_output="$(lxc_exec "$VM_NAME" docker exec "$container" node dist/index.js dashboard --no-open 2>/dev/null)" || true
   local token_url
@@ -159,6 +147,8 @@ configure_gateway() {
   if [[ -n "$token_url" ]]; then
     log "Dashboard URL: $token_url"
   fi
+
+  log "After opening the dashboard, approve your device with: ./scripts/run.sh approve"
 }
 
 # --- Main ---

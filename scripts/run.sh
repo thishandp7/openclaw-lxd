@@ -38,6 +38,7 @@ Commands:
   snapshot   Create VM snapshot only (phase 80)
   export     Snapshot and export VM tarball (phase 80 with export)
   destroy    Delete VM and proxy devices (phase 90). Pass --purge to also remove state/exports and state/logs.
+  approve    Approve all pending device pairing requests
   recreate   Destroy then up
 
 Options (before command):
@@ -236,6 +237,28 @@ cmd_destroy() {
   "$SCRIPT_DIR/90_destroy.sh" "$@"
 }
 
+cmd_approve() {
+  load_env
+  require_cmd lxc
+  local container="repo-openclaw-gateway-1"
+  local pending
+  pending="$(lxc_exec "$VM_NAME" docker exec "$container" cat /home/node/.openclaw/devices/pending.json 2>/dev/null)" || true
+  if [[ -z "$pending" ]] || [[ "$pending" == "{}" ]]; then
+    echo "No pending pairing requests found."
+    echo "Open the dashboard URL first, then run this command again."
+    exit 0
+  fi
+  local request_ids
+  request_ids="$(echo "$pending" | grep -oP '"requestId"\s*:\s*"\K[^"]+')" || true
+  local count=0
+  for rid in $request_ids; do
+    echo "Approving device: $rid"
+    lxc_exec "$VM_NAME" docker exec "$container" node dist/index.js devices approve "$rid" 2>/dev/null || true
+    count=$(( count + 1 ))
+  done
+  echo "Approved $count device(s). Refresh the dashboard."
+}
+
 cmd_recreate() {
   OPENCLAW_RECREATE=true
   export OPENCLAW_RECREATE
@@ -253,6 +276,7 @@ case "$SUBCMD" in
   snapshot) cmd_snapshot ;;
   export)   cmd_export ;;
   destroy)  cmd_destroy "$@" ;;
+  approve)  cmd_approve ;;
   recreate) cmd_recreate ;;
   "")
     echo "Missing command." >&2
