@@ -142,15 +142,15 @@ On the **host** (after `up`), the script prints something like:
 
 ```text
 From your Mac, tunnel with:
-  ssh -L 18789:127.0.0.1:18789 <user>@<tailscale-hostname>
+  ssh -L 18789:<vm-bridge-ip>:18789 <user>@<tailscale-hostname>
 ```
 
 On your **Mac**:
 
 1. Ensure Tailscale is running and you can reach the host at `<tailscale-hostname>`.
 2. Run the printed command (replace `<user>` and `<tailscale-hostname>` if needed).
-3. In the browser on your Mac, open: `http://127.0.0.1:18789/`  
-   Traffic goes: Mac → SSH tunnel → host `127.0.0.1:18789` → LXD proxy → VM → OpenClaw.
+3. In the browser on your Mac, open: `http://127.0.0.1:18789/`
+   Traffic goes: Mac → SSH tunnel (Tailscale) → host → LXD bridge → VM → OpenClaw.
 
 ### Commands reference
 
@@ -191,6 +191,64 @@ Examples:
 - **Ports** are bound to **127.0.0.1** only in the VM and on the host; OpenClaw is not exposed on the LAN.
 - **Secrets** live only in `state/openclaw.secrets.env` (gitignored); they are pushed into the VM at deploy time and are not logged.
 - **Snapshot:** Creating a snapshot with the same name again **replaces** the previous snapshot of that name.
+
+## Network architecture
+
+```
++-----------------------------------------------------------------------------+
+|  YOUR MACBOOK                                                               |
+|                                                                             |
+|  Browser --> localhost:18789                                                |
+|                    |                                                        |
+|                    | SSH Tunnel (-L 18789:<vm-ip>:18789)                     |
+|                    v                                                        |
+|              +-----------+                                                  |
+|              | Tailscale |  <-- WireGuard encrypted tunnel                  |
+|              +-----+-----+                                                  |
++--------------------|---------------------------------------------------------+
+                     |
+          === INTERNET (encrypted) ===
+                     |
++--------------------|---------------------------------------------------------+
+|  UBUNTU HOST       |                                                        |
+|              +-----+-----+                                                  |
+|              | Tailscale |  <-- Only Tailscale peers can connect             |
+|              +-----+-----+                                                  |
+|                    |                                                        |
+|              +-----+-----+                                                  |
+|              | SSH Server |  <-- Forwards to <vm-ip>:18789                  |
+|              +-----+-----+                                                  |
+|                    |                                                        |
+|              +-----+------------------------------+                         |
+|              | lxdbr0 (LXD Bridge)                 |  <-- Private network   |
+|              | 10.x.x.1/24                         |      NOT routable from |
+|              | NAT outbound only                   |      internet or LAN   |
+|              +-----+------------------------------+                         |
+|                    |                                                        |
+|  +-----------------+---------------------------------------------+          |
+|  |  LXD VM (openclaw-vm)                                         |          |
+|  |  enp5s0: 10.x.x.10 (static)                                  |          |
+|  |                 |                                              |          |
+|  |                 v                                              |          |
+|  |  +--------------------------------------+                     |          |
+|  |  | Docker (network_mode: host)          |                     |          |
+|  |  |                                      |                     |          |
+|  |  |  openclaw-gateway                    |                     |          |
+|  |  |  listening ws://0.0.0.0:18789        |  <-- Dashboard      |          |
+|  |  |                                      |                     |          |
+|  |  +--------------------------------------+                     |          |
+|  +---------------------------------------------------------------+          |
+|                                                                             |
+|  X No ports exposed on public interface                                     |
+|  X No ports exposed on LAN                                                  |
++-----------------------------------------------------------------------------+
+
+SECURITY LAYERS:
+  1. Tailscale --- WireGuard encryption + device auth (only your devices)
+  2. SSH -------- Encrypted tunnel + key-based auth
+  3. LXD Bridge - Private 10.x.x.0/24 (host-only, no external routing)
+  4. VM --------- Full kernel-level VM isolation
+```
 
 ## Security and trust
 

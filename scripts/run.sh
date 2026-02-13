@@ -139,8 +139,14 @@ print_success_block() {
   if [[ -z "$tailscale_host" ]]; then
     tailscale_host="${OPENCLAW_TAILSCALE_HOST:-<tailscale-hostname>}"
   fi
+  # Get the VM's static IP on the bridge for the tunnel command
+  local vm_ip=""
+  vm_ip="$(lxc config device get "$VM_NAME" eth0 ipv4.address 2>/dev/null)" || true
+  if [[ -z "$vm_ip" ]]; then
+    vm_ip="127.0.0.1"
+  fi
   echo "From your Mac, tunnel with:"
-  echo "  ssh -L ${OPENCLAW_PORT}:127.0.0.1:${OPENCLAW_PORT} ${ssh_user}@${tailscale_host}"
+  echo "  ssh -L ${OPENCLAW_PORT}:${vm_ip}:${OPENCLAW_PORT} ${ssh_user}@${tailscale_host}"
   echo ""
 }
 
