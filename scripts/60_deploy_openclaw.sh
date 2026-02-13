@@ -119,6 +119,48 @@ http_ok() {
   lxc_exec "$VM_NAME" ss -lntp 2>/dev/null | grep -q ":${GATEWAY_PORT}"
 }
 
+configure_gateway() {
+  local container="repo-openclaw-gateway-1"
+
+  # 1. Run setup (creates openclaw.json, workspace, sessions) — idempotent
+  log "Running openclaw setup..."
+  lxc_exec "$VM_NAME" docker exec "$container" node dist/index.js setup 2>/dev/null || true
+
+  # 2. Interactive TUI: openclaw configure (credentials, devices, agent defaults)
+  #    Requires -it for terminal interaction. User completes the wizard, then automation resumes.
+  log "Launching interactive OpenClaw configure wizard..."
+  log "Complete the wizard to set up credentials, devices, and agent defaults."
+  log "(Press Ctrl+C to skip if already configured)"
+  lxc exec "$VM_NAME" -- docker exec -it "$container" node dist/index.js configure || true
+
+  # 3. Set gateway mode to local — idempotent
+  lxc_exec "$VM_NAME" docker exec "$container" node dist/index.js config set gateway.mode local 2>/dev/null || true
+
+  # 4. Run doctor --fix (creates credentials dir, fixes permissions) — idempotent
+  lxc_exec "$VM_NAME" docker exec "$container" node dist/index.js doctor --fix 2>/dev/null || true
+
+  # 5. Auto-approve ALL pending device pairing requests
+  local pending
+  pending="$(lxc_exec "$VM_NAME" docker exec "$container" cat /home/node/.openclaw/devices/pending.json 2>/dev/null)" || true
+  if [[ -n "$pending" ]] && [[ "$pending" != "{}" ]]; then
+    local request_ids
+    request_ids="$(echo "$pending" | grep -oP '"requestId"\s*:\s*"\K[^"]+')" || true
+    for rid in $request_ids; do
+      log "Auto-approving pending device: $rid"
+      lxc_exec "$VM_NAME" docker exec "$container" node dist/index.js devices approve "$rid" 2>/dev/null || true
+    done
+  fi
+
+  # 6. Print dashboard URL with pairing token
+  local dashboard_output
+  dashboard_output="$(lxc_exec "$VM_NAME" docker exec "$container" node dist/index.js dashboard --no-open 2>/dev/null)" || true
+  local token_url
+  token_url="$(echo "$dashboard_output" | grep -oP 'http://\S+#token=\S+' | head -1)" || true
+  if [[ -n "$token_url" ]]; then
+    log "Dashboard URL: $token_url"
+  fi
+}
+
 # --- Main ---
 log "Deploying OpenClaw (bind=$BIND_VALUE)..."
 
@@ -140,6 +182,7 @@ fi
 if deploy_and_check "$BIND_VALUE"; then
   if http_ok; then
     log "Deploy and health checks OK (bind=$BIND_VALUE)"
+    configure_gateway
     exit 0
   fi
   log "ERROR: Bind OK but HTTP check failed (bind=$BIND_VALUE)."
@@ -151,6 +194,7 @@ log "Bind check failed with localhost; trying OPENCLAW_GATEWAY_BIND=loopback..."
 if deploy_and_check "loopback"; then
   if http_ok; then
     log "Deploy and health checks OK (bind=loopback)"
+    configure_gateway
     exit 0
   fi
   log "ERROR: Bind OK but HTTP check failed (bind=loopback)."

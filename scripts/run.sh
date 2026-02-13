@@ -148,6 +148,17 @@ print_success_block() {
   echo "From your Mac, tunnel with:"
   echo "  ssh -L ${OPENCLAW_PORT}:${vm_ip}:${OPENCLAW_PORT} ${ssh_user}@${tailscale_host}"
   echo ""
+
+  # Dashboard URL with pairing token
+  local dashboard_output
+  dashboard_output="$(lxc_exec "$VM_NAME" docker exec repo-openclaw-gateway-1 node dist/index.js dashboard --no-open 2>/dev/null)" || true
+  local token_url
+  token_url="$(echo "$dashboard_output" | grep -oP 'http://\S+#token=\S+' | head -1)" || true
+  if [[ -n "$token_url" ]]; then
+    echo "Then open:"
+    echo "  $token_url"
+    echo ""
+  fi
 }
 
 cmd_verify() {
