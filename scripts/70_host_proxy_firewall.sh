@@ -10,12 +10,35 @@ load_env
 require_cmd lxc
 
 # Ensure VM has a static IP on lxdbr0 (required for NAT proxy)
+BRIDGE_SUBNET="$(lxc network get lxdbr0 ipv4.address)"  # e.g. 10.203.128.1/24
+BRIDGE_PREFIX="${BRIDGE_SUBNET%.*}"                       # e.g. 10.203.128
+VM_STATIC_IP="${BRIDGE_PREFIX}.10"
+
 if ! lxc config device get "$VM_NAME" eth0 ipv4.address 2>/dev/null | grep -q '.'; then
-  BRIDGE_SUBNET="$(lxc network get lxdbr0 ipv4.address)"  # e.g. 10.75.159.1/24
-  BRIDGE_PREFIX="${BRIDGE_SUBNET%.*}"                       # e.g. 10.75.159
-  VM_STATIC_IP="${BRIDGE_PREFIX}.10"
   log "Assigning static IP $VM_STATIC_IP to $VM_NAME eth0"
   lxc config device override "$VM_NAME" eth0 ipv4.address="$VM_STATIC_IP"
+fi
+
+# Ensure the VM's interface actually has the static IP (DHCP renewal needed after override)
+VM_NIC="$(lxc exec "$VM_NAME" -- sh -c "ip -4 addr show | grep -oP '(?<=\d: )\S+(?=:)' | head -2 | tail -1")" || VM_NIC="enp5s0"
+CURRENT_IP="$(lxc exec "$VM_NAME" -- sh -c "ip -4 -o addr show $VM_NIC" 2>/dev/null | awk '{print $4}' | cut -d/ -f1)" || true
+if [[ "$CURRENT_IP" != "$VM_STATIC_IP" ]]; then
+  log "VM has IP $CURRENT_IP, expected $VM_STATIC_IP — forcing DHCP renewal on $VM_NIC"
+  lxc exec "$VM_NAME" -- networkctl reconfigure "$VM_NIC" 2>/dev/null \
+    || lxc exec "$VM_NAME" -- sh -c "dhclient -r $VM_NIC && dhclient $VM_NIC" 2>/dev/null \
+    || log "WARN: Could not force DHCP renewal"
+  # Wait for the static IP to take effect
+  for i in $(seq 1 15); do
+    CURRENT_IP="$(lxc exec "$VM_NAME" -- sh -c "ip -4 -o addr show $VM_NIC" 2>/dev/null | awk '{print $4}' | cut -d/ -f1)" || true
+    if [[ "$CURRENT_IP" == "$VM_STATIC_IP" ]]; then
+      log "VM acquired static IP $VM_STATIC_IP"
+      break
+    fi
+    sleep 2
+  done
+  if [[ "$CURRENT_IP" != "$VM_STATIC_IP" ]]; then
+    log "WARN: VM still has IP $CURRENT_IP instead of $VM_STATIC_IP after DHCP renewal"
+  fi
 fi
 
 # 70.1 LXD proxy device: host 127.0.0.1:OPENCLAW_PORT -> VM port (NAT mode required for VMs)
