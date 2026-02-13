@@ -15,7 +15,7 @@ if ! lxc config device get "$VM_NAME" eth0 ipv4.address 2>/dev/null | grep -q '.
   BRIDGE_PREFIX="${BRIDGE_SUBNET%.*}"                       # e.g. 10.75.159
   VM_STATIC_IP="${BRIDGE_PREFIX}.10"
   log "Assigning static IP $VM_STATIC_IP to $VM_NAME eth0"
-  lxc config device set "$VM_NAME" eth0 ipv4.address="$VM_STATIC_IP"
+  lxc config device override "$VM_NAME" eth0 ipv4.address="$VM_STATIC_IP"
 fi
 
 # 70.1 LXD proxy device: host 127.0.0.1:OPENCLAW_PORT -> VM port (NAT mode required for VMs)
