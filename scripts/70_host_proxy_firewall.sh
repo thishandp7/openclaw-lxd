@@ -10,8 +10,8 @@ load_env
 require_cmd lxc
 
 # Ensure VM has a static IP on lxdbr0 (required for NAT proxy)
-BRIDGE_SUBNET="$(lxc network get lxdbr0 ipv4.address)"  # e.g. 10.203.128.1/24
-BRIDGE_PREFIX="${BRIDGE_SUBNET%.*}"                       # e.g. 10.203.128
+BRIDGE_SUBNET="$(lxc network get lxdbr0 ipv4.address)"  # e.g. 10.x.x.1/24
+BRIDGE_PREFIX="${BRIDGE_SUBNET%.*}"                       # e.g. 10.x.x
 VM_STATIC_IP="${BRIDGE_PREFIX}.10"
 
 if ! lxc config device get "$VM_NAME" eth0 ipv4.address 2>/dev/null | grep -q '.'; then
