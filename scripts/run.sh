@@ -113,10 +113,10 @@ print_success_block() {
 
   local ss_vm
   ss_vm="$(lxc_exec "$VM_NAME" ss -lntp 2>/dev/null)" || true
-  if echo "$ss_vm" | grep -qE '127\.0\.0\.1:(18789|18790)\s'; then
+  if echo "$ss_vm" | grep -qE ':(18789|18790)\s'; then
     vm_bind_ok=true
   fi
-  echo "VM binds only to 127.0.0.1:18789/18790: ${vm_bind_ok:+✅ true}${vm_bind_ok:-❌ false}"
+  echo "VM ports 18789/18790 listening: ${vm_bind_ok:+✅ true}${vm_bind_ok:-❌ false}"
 
   local ss_host
   ss_host="$(ss -lntp 2>/dev/null)" || true
@@ -169,11 +169,11 @@ cmd_verify() {
   if [[ "$vm_ok" == true ]]; then
     local ss_vm
     ss_vm="$(lxc_exec "$VM_NAME" ss -lntp 2>/dev/null)" || true
-    if echo "$ss_vm" | grep -qE '127\.0\.0\.1:(18789|18790)\s'; then
+    if echo "$ss_vm" | grep -qE ':(18789|18790)\s'; then
       vm_bind_ok=true
-      echo "  VM binds only to 127.0.0.1:18789/18790: ✅"
+      echo "  VM ports 18789/18790 listening: ✅"
     else
-      echo "  VM binds only to 127.0.0.1:18789/18790: ❌"
+      echo "  VM ports 18789/18790 listening: ❌"
     fi
   fi
 

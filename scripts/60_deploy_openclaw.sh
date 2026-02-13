@@ -32,8 +32,8 @@ build_env_file() {
   echo "OPENCLAW_CONFIG_DIR=/opt/openclaw/config"
   echo "OPENCLAW_WORKSPACE_DIR=/opt/openclaw/workspace"
   echo "OPENCLAW_GATEWAY_BIND=$(env_escape "$bind_val")"
-  echo "OPENCLAW_GATEWAY_PORT=127.0.0.1:${GATEWAY_PORT}"
-  echo "OPENCLAW_BRIDGE_PORT=127.0.0.1:${BRIDGE_PORT}"
+  echo "OPENCLAW_GATEWAY_PORT=${GATEWAY_PORT}"
+  echo "OPENCLAW_BRIDGE_PORT=${BRIDGE_PORT}"
   # Secrets (already loaded from openclaw.secrets.env)
   [[ -n "${OPENCLAW_GATEWAY_TOKEN:-}" ]] && echo "OPENCLAW_GATEWAY_TOKEN=$(env_escape "$OPENCLAW_GATEWAY_TOKEN")"
   [[ -n "${CLAUDE_AI_SESSION_KEY:-}" ]] && echo "CLAUDE_AI_SESSION_KEY=$(env_escape "$CLAUDE_AI_SESSION_KEY")"
@@ -95,13 +95,10 @@ deploy_and_check() {
     log "WARNING: Container health check did not confirm running state"
   fi
 
-  # Check bind: ss must show 127.0.0.1 for 18789 and 18790
+  # Check: ports 18789 and 18790 are listening in VM (VM is isolated behind lxdbr0)
   local ss_out
   ss_out="$(lxc_exec "$VM_NAME" ss -lntp 2>/dev/null)" || true
-  if echo "$ss_out" | grep -qE '127\.0\.0\.1:(18789|18790)\s'; then
-    if echo "$ss_out" | grep -qE '0\.0\.0\.0:(18789|18790)\s'; then
-      return 1
-    fi
+  if echo "$ss_out" | grep -qE ':(18789|18790)\s'; then
     return 0
   fi
   return 1

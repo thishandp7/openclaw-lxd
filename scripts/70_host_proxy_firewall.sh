@@ -9,15 +9,17 @@ source "$SCRIPT_DIR/lib.sh"
 load_env
 require_cmd lxc
 
-# 70.1 LXD proxy device: host 127.0.0.1:OPENCLAW_PORT -> VM 127.0.0.1:OPENCLAW_PORT
+# 70.1 LXD proxy device: host 127.0.0.1:OPENCLAW_PORT -> VM port (NAT mode required for VMs)
 ensure_lxc_device "$VM_NAME" openclaw-ui proxy \
   listen="tcp:127.0.0.1:${OPENCLAW_PORT}" \
-  connect="tcp:127.0.0.1:${OPENCLAW_PORT}"
+  connect="tcp:0.0.0.0:${OPENCLAW_PORT}" \
+  nat=true
 
 # Optional: bridge port proxy
 ensure_lxc_device "$VM_NAME" openclaw-bridge proxy \
   listen="tcp:127.0.0.1:${OPENCLAW_BRIDGE_PORT}" \
-  connect="tcp:127.0.0.1:${OPENCLAW_BRIDGE_PORT}"
+  connect="tcp:0.0.0.0:${OPENCLAW_BRIDGE_PORT}" \
+  nat=true
 
 # 70.2 Verify host exposure (host-side ports)
 log "Verifying host binds to 127.0.0.1 only..."
