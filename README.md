@@ -200,7 +200,7 @@ Examples:
 |                                                                             |
 |  Browser --> localhost:18789                                                |
 |                    |                                                        |
-|                    | SSH Tunnel (-L 18789:<vm-ip>:18789)                     |
+|                    | SSH Tunnel (-L 18789:<vm-ip>:18789)                    |
 |                    v                                                        |
 |              +-----------+                                                  |
 |              | Tailscale |  <-- WireGuard encrypted tunnel                  |
@@ -212,7 +212,7 @@ Examples:
 +--------------------|---------------------------------------------------------+
 |  UBUNTU HOST       |                                                        |
 |              +-----+-----+                                                  |
-|              | Tailscale |  <-- Only Tailscale peers can connect             |
+|              | Tailscale |  <-- Only Tailscale peers can connect            |
 |              +-----+-----+                                                  |
 |                    |                                                        |
 |              +-----+-----+                                                  |
@@ -227,9 +227,9 @@ Examples:
 |                    |                                                        |
 |  +-----------------+---------------------------------------------+          |
 |  |  LXD VM (openclaw-vm)                                         |          |
-|  |  enp5s0: 10.x.x.10 (static)                                  |          |
-|  |                 |                                              |          |
-|  |                 v                                              |          |
+|  |  enp5s0: 10.x.x.10 (static)                                   |          |
+|  |                 |                                             |          |
+|  |                 v                                             |          |
 |  |  +--------------------------------------+                     |          |
 |  |  | Docker (network_mode: host)          |                     |          |
 |  |  |                                      |                     |          |
