@@ -60,6 +60,8 @@ services:
   openclaw-gateway:
     network_mode: host
     command: ["node", "dist/index.js", "gateway", "--bind", "lan", "--port", "18789", "--allow-unconfigured"]
+    volumes:
+      - /opt/openclaw/state:/home/node/.openclaw
     security_opt:
       - no-new-privileges:true
     cap_drop:
@@ -119,6 +121,9 @@ http_ok() {
 
 # --- Main ---
 log "Deploying OpenClaw (bind=$BIND_VALUE)..."
+
+# Ensure state dir exists and is writable by the container's node user (UID 1000)
+lxc_exec "$VM_NAME" bash -c 'mkdir -p /opt/openclaw/state && chown 1000:1000 /opt/openclaw/state'
 
 # Build Docker image if not already present
 if ! lxc_exec "$VM_NAME" docker image inspect openclaw:local &>/dev/null; then

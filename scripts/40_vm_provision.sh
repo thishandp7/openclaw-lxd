@@ -73,8 +73,10 @@ else
 fi
 
 # Create OpenClaw dirs
-lxc_exec "$VM_NAME" bash -c 'mkdir -p /opt/openclaw/config /opt/openclaw/workspace'
-log "Created /opt/openclaw/config and /opt/openclaw/workspace"
+lxc_exec "$VM_NAME" bash -c 'mkdir -p /opt/openclaw/config /opt/openclaw/workspace /opt/openclaw/state'
+# /opt/openclaw/state is mounted as /home/node/.openclaw inside the container (UID 1000 = node)
+lxc_exec "$VM_NAME" bash -c 'chown 1000:1000 /opt/openclaw/state'
+log "Created /opt/openclaw/{config,workspace,state}"
 
 # Verify
 lxc_exec "$VM_NAME" docker --version
