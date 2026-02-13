@@ -97,11 +97,16 @@ deploy_and_check() {
   fi
 
   # Check: ports 18789 and 18790 are listening in VM (VM is isolated behind lxdbr0)
-  local ss_out
-  ss_out="$(lxc_exec "$VM_NAME" ss -lntp 2>/dev/null)" || true
-  if echo "$ss_out" | grep -qE ':(18789|18790)\s'; then
-    return 0
-  fi
+  # Retry because the gateway process may take a few seconds to bind the port
+  local i
+  for i in $(seq 1 10); do
+    local ss_out
+    ss_out="$(lxc_exec "$VM_NAME" ss -lntp 2>/dev/null)" || true
+    if echo "$ss_out" | grep -qE ':(18789|18790)\s'; then
+      return 0
+    fi
+    sleep 2
+  done
   return 1
 }
 
