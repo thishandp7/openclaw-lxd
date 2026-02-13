@@ -107,9 +107,11 @@ deploy_and_check() {
   return 1
 }
 
-# Health: HTTP check inside VM
+# Health: Check if gateway container is running and port is listening
 http_ok() {
-  lxc_exec "$VM_NAME" curl -fsS --max-time 5 "http://127.0.0.1:${GATEWAY_PORT}/" >/dev/null 2>&1
+  # WebSocket server doesn't respond to HTTP GET, so check container status instead
+  lxc_exec "$VM_NAME" docker ps --format '{{.Names}}' 2>/dev/null | grep -q 'openclaw-gateway' && \
+  lxc_exec "$VM_NAME" ss -lntp 2>/dev/null | grep -q ":${GATEWAY_PORT}"
 }
 
 # --- Main ---
