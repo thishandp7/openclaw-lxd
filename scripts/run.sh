@@ -103,7 +103,7 @@ print_success_block() {
   echo ""
 
   # Run checks and print results
-  local vm_ok=false containers_ok=false vm_bind_ok=false host_bind_ok=false snapshot_ok=false
+  local vm_ok="" containers_ok="" vm_bind_ok="" host_bind_ok="" snapshot_ok=""
   exists_vm "$VM_NAME" && vm_ok=true
   echo "VM running: ${vm_ok:+✅ true}${vm_ok:-❌ false}"
 
@@ -135,7 +135,7 @@ print_success_block() {
   local ssh_user="${OPENCLAW_SSH_USER:-$(whoami)}"
   local tailscale_host=""
   if command -v tailscale &>/dev/null && tailscale status &>/dev/null; then
-    tailscale_host="$(tailscale status --self --json 2>/dev/null | sed -n 's/.*"HostName"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' || true)"
+    tailscale_host="$(tailscale status --self --json 2>/dev/null | sed -n 's/.*"HostName"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -1 || true)"
   fi
   if [[ -z "$tailscale_host" ]]; then
     tailscale_host="${OPENCLAW_TAILSCALE_HOST:-<tailscale-hostname>}"
@@ -147,7 +147,7 @@ print_success_block() {
     vm_ip="127.0.0.1"
   fi
   echo "From your Mac, tunnel with:"
-  echo "  ssh -L ${OPENCLAW_PORT}:${vm_ip}:${OPENCLAW_PORT} ${ssh_user}@${tailscale_host}"
+  echo "  ssh -N -L ${OPENCLAW_PORT}:${vm_ip}:${OPENCLAW_PORT} ${ssh_user}@${tailscale_host}"
   echo ""
 
   # Dashboard URL with pairing token
@@ -167,7 +167,7 @@ cmd_verify() {
   require_cmd lxc
   ensure_dir "$LOG_DIR" 0755
 
-  local vm_ok=false containers_ok=false vm_bind_ok=false host_bind_ok=false
+  local vm_ok="" containers_ok="" vm_bind_ok="" host_bind_ok=""
   echo "Verifying..."
 
   if exists_vm "$VM_NAME"; then
