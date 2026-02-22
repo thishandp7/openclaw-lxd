@@ -105,31 +105,31 @@ print_success_block() {
   # Run checks and print results
   local vm_ok="" containers_ok="" vm_bind_ok="" host_bind_ok="" snapshot_ok=""
   exists_vm "$VM_NAME" && vm_ok=true
-  echo "VM running: ${vm_ok:+✅ true}${vm_ok:-❌ false}"
+  echo "VM running: $( [[ -n "$vm_ok" ]] && echo "✅ true" || echo "❌ false" )"
 
   if lxc_exec "$VM_NAME" bash -c 'cd /opt/openclaw/repo && docker compose --env-file /opt/openclaw/openclaw.env ps 2>/dev/null' 2>/dev/null | grep -qE 'running|Up'; then
     containers_ok=true
   fi
-  echo "OpenClaw containers running: ${containers_ok:+✅ true}${containers_ok:-❌ false}"
+  echo "OpenClaw containers running: $( [[ -n "$containers_ok" ]] && echo "✅ true" || echo "❌ false" )"
 
   local ss_vm
   ss_vm="$(lxc_exec "$VM_NAME" ss -lntp 2>/dev/null)" || true
   if echo "$ss_vm" | grep -qE ':(18789|18790)\s'; then
     vm_bind_ok=true
   fi
-  echo "VM ports 18789/18790 listening: ${vm_bind_ok:+✅ true}${vm_bind_ok:-❌ false}"
+  echo "VM ports 18789/18790 listening: $( [[ -n "$vm_bind_ok" ]] && echo "✅ true" || echo "❌ false" )"
 
   local ss_host
   ss_host="$(ss -lntp 2>/dev/null)" || true
   if echo "$ss_host" | grep -qE '127\.0\.0\.1:('"${OPENCLAW_PORT}"'|'"${OPENCLAW_BRIDGE_PORT}"')\s'; then
     host_bind_ok=true
   fi
-  echo "Host binds only to 127.0.0.1:${OPENCLAW_PORT}/${OPENCLAW_BRIDGE_PORT}: ${host_bind_ok:+✅ true}${host_bind_ok:-❌ false}"
+  echo "Host binds only to 127.0.0.1:${OPENCLAW_PORT}/${OPENCLAW_BRIDGE_PORT}: $( [[ -n "$host_bind_ok" ]] && echo "✅ true" || echo "❌ false" )"
 
   if lxc list "$VM_NAME" --snapshots --format csv 2>/dev/null | grep -q "$SNAPSHOT_NAME"; then
     snapshot_ok=true
   fi
-  echo "Snapshot created: ${snapshot_ok:+✅ true}${snapshot_ok:-❌ false}"
+  echo "Snapshot created: $( [[ -n "$snapshot_ok" ]] && echo "✅ true" || echo "❌ false" )"
 
   echo ""
   local ssh_user="${OPENCLAW_SSH_USER:-$(whoami)}"

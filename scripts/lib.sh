@@ -184,14 +184,15 @@ ensure_lxc_device() {
   local dev_name="${2:?}"
   local dev_type="${3:?}"
   shift 3
-  if lxc config device show "$vm" 2>/dev/null | grep -q "^$dev_name:"; then
-    log "Device $dev_name already exists on $vm"
-    return 0
-  fi
   local args=()
   for arg in "$@"; do
     args+=( "$arg" )
   done
-  log "Adding device $dev_name to $vm"
-  lxc config device add "$vm" "$dev_name" "$dev_type" "${args[@]}"
+  if lxc config device show "$vm" 2>/dev/null | grep -q "^$dev_name:"; then
+    log "Device $dev_name already exists on $vm; updating config"
+    lxc config device set "$vm" "$dev_name" "${args[@]}"
+  else
+    log "Adding device $dev_name to $vm"
+    lxc config device add "$vm" "$dev_name" "$dev_type" "${args[@]}"
+  fi
 }
